@@ -275,7 +275,7 @@ def get_resumen(usuario: dict = Depends(get_usuario_actual)):
     citas_hoy = [c for c in usuario["citas"] if c["fecha"] == hoy]
     return {"citas_hoy": len(citas_hoy), "total_citas": len(usuario["citas"])}
 
-# ========== FRONTEND OPTIMIZADO PARA CELULAR ==========
+# ========== FRONTEND OPTIMIZADO ==========
 HTML_CONTENT = '''<!DOCTYPE html>
 <html>
 <head>
@@ -304,7 +304,7 @@ HTML_CONTENT = '''<!DOCTYPE html>
         
         /* Tabs */
         .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; background: white; padding: 6px; border-radius: 40px; }
-        .tab { flex: 1; padding: 10px 6px; background: #f0f0f0; text-align: center; cursor: pointer; border-radius: 30px; font-size: 12px; font-weight: 600; transition: all 0.2s; min-width: 60px; }
+        .tab { flex: 1; padding: 10px 6px; background: #f0f0f0; text-align: center; cursor: pointer; border-radius: 30px; font-size: 12px; font-weight: 600; min-width: 60px; }
         .tab.active { background: #2E7D32; color: white; }
         
         /* Cards */
@@ -315,21 +315,21 @@ HTML_CONTENT = '''<!DOCTYPE html>
         input, select, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; background: white; }
         button { width: 100%; padding: 12px; background: #2E7D32; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; }
         button.danger { background: #C62828; width: auto; padding: 5px 12px; font-size: 12px; }
-        button.small { width: auto; padding: 5px 12px; font-size: 12px; }
         
         /* Servicios */
         .servicio-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f9f9f9; margin-bottom: 6px; border-radius: 10px; }
         .servicio-nombre { font-size: 14px; }
         
-        /* Horarios - Compacto */
-        .horario-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; background: #f9f9f9; padding: 8px; border-radius: 10px; }
-        .horario-dia { width: 55px; font-size: 12px; font-weight: bold; }
-        .horario-check { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+        /* Horarios - Fila horizontal compacta */
+        .horario-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; background: #f9f9f9; padding: 8px 12px; border-radius: 10px; flex-wrap: wrap; }
+        .horario-dia { width: 45px; font-size: 13px; font-weight: bold; }
+        .horario-check { display: flex; align-items: center; gap: 4px; font-size: 12px; margin-left: 5px; }
         .horario-time { width: 70px; padding: 6px; font-size: 12px; margin: 0; }
         
-        /* Tablas compactas */
+        /* Tablas con columnas bien definidas */
+        .tabla-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #eee; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #A8E6CF; color: #2E7D32; font-weight: 600; }
         
         /* Horarios disponibles */
@@ -406,7 +406,7 @@ HTML_CONTENT = '''<!DOCTYPE html>
             </div>
         </div>
         
-        <!-- Horarios compacto -->
+        <!-- Horarios compacto horizontal -->
         <div id="tab-horarios" class="tab-content">
             <div class="card">
                 <h2>⏰ Horarios Laborales</h2>
@@ -461,7 +461,7 @@ HTML_CONTENT = '''<!DOCTYPE html>
             <div class="card">
                 <h2>📅 Citas por Fecha</h2>
                 <input type="date" id="filtroFecha" onchange="cargarCitas()">
-                <div id="listaCitas"></div>
+                <div class="tabla-container" id="listaCitas"></div>
             </div>
         </div>
         
@@ -474,7 +474,7 @@ HTML_CONTENT = '''<!DOCTYPE html>
             </div>
             <div class="card">
                 <h2>📋 Todas las Citas</h2>
-                <div id="todasCitas"></div>
+                <div class="tabla-container" id="todasCitas"></div>
             </div>
         </div>
     </div>
@@ -614,7 +614,7 @@ HTML_CONTENT = '''<!DOCTYPE html>
         for(let i=0;i<h.length;i++){
             html+=`<div class="horario-row">
                 <span class="horario-dia">${dias[i]}</span>
-                <label class="horario-check"><input type="checkbox" id="activo_${i}" ${h[i].activo?'checked':''}> Act</label>
+                <label class="horario-check"><input type="checkbox" id="activo_${i}" ${h[i].activo?'checked':''}> Activo</label>
                 <input type="time" id="inicio_${i}" value="${h[i].inicio}" class="horario-time" ${!h[i].activo?'disabled':''}>
                 <span>-</span>
                 <input type="time" id="fin_${i}" value="${h[i].fin}" class="horario-time" ${!h[i].activo?'disabled':''}>
@@ -682,8 +682,13 @@ HTML_CONTENT = '''<!DOCTYPE html>
         const res=await fetchApi(`/api/citas?fecha=${fecha}`);
         const c=await res.json();
         const container=document.getElementById('listaCitas');
-        if(c.length===0) container.innerHTML='<p style="color:#999;">No hay citas para esta fecha</p>';
-        else container.innerHTML=`<table><thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th></th></tr></thead><tbody>${c.map(c=>`<tr><td>${c.hora}</td><td>${c.nombre}</td><td>${c.servicio}</td><td><button class="danger" onclick="eliminarCita(${c.id})">X</button></td></tr>`).join('')}</tbody></table>`;
+        if(c.length===0) container.innerHTML='<p style="color:#999; text-align:center;">No hay citas para esta fecha</p>';
+        else container.innerHTML=`
+            <table>
+                <thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th></th></tr></thead>
+                <tbody>${c.map(c=>`<tr><td>${c.hora}</td><td>${c.nombre}</td><td>${c.servicio}</td><td><button class="danger" onclick="eliminarCita(${c.id})">X</button></td></tr>`).join('')}</tbody>
+            </table>
+        `;
     }
     
     async function eliminarCita(id){
@@ -727,8 +732,13 @@ HTML_CONTENT = '''<!DOCTYPE html>
         const resTodas=await fetchApi('/api/citas');
         const todas=await resTodas.json();
         const container=document.getElementById('todasCitas');
-        if(todas.length===0) container.innerHTML='<p style="color:#999;">No hay citas agendadas</p>';
-        else container.innerHTML=`<table><thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th></tr></thead><tbody>${todas.map(c=>`<tr><td>${c.fecha}</td><td>${c.hora}</td><td>${c.nombre}</td><td>${c.servicio}</td></tr>`).join('')}</tbody></table>`;
+        if(todas.length===0) container.innerHTML='<p style="color:#999; text-align:center;">No hay citas agendadas</p>';
+        else container.innerHTML=`
+            <table>
+                <thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicio</th></tr></thead>
+                <tbody>${todas.map(c=>`<tr><td>${c.fecha}</td><td>${c.hora}</td><td>${c.nombre}</td><td>${c.servicio}</td></tr>`).join('')}</tbody>
+            </table>
+        `;
     }
     
     if(token) cargarApp();
